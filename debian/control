@@ -21,7 +21,7 @@ Pre-Depends: dpkg (>= 1.15.6~)
 Depends: ${misc:Depends}, ${python:Depends}
 Suggests: python-semantic-version-doc
 Description: implementing the SemVer scheme - Python 2.x
- This small python library provides a few tools to handle SemVer in Python. It
+ This small Python library provides a few tools to handle SemVer in Python. It
  follows strictly the 2.0.0 version of the SemVer scheme. semantic_version can
  also support versions which wouldn't match the semantic version scheme by
  converting a version such as 0.1.2.3.4 into 0.1.2+3.4.
@@ -34,7 +34,7 @@ Pre-Depends: dpkg (>= 1.15.6~)
 Depends: ${misc:Depends}, ${python3:Depends}
 Suggests: python-semantic-version-doc
 Description: implementing the SemVer scheme - Python 3.x
- This small python library provides a few tools to handle SemVer in Python. It
+ This small Python library provides a few tools to handle SemVer in Python. It
  follows strictly the 2.0.0 version of the SemVer scheme. semantic_version can
  also support versions which wouldn't match the semantic version scheme by
  converting a version such as 0.1.2.3.4 into 0.1.2+3.4.
@@ -47,7 +47,7 @@ Architecture: all
 Pre-Depends: dpkg (>= 1.15.6~)
 Depends: ${misc:Depends}, ${sphinxdoc:Depends}
 Description: implementing the SemVer scheme - doc
- This small python library provides a few tools to handle SemVer in Python. It
+ This small Python library provides a few tools to handle SemVer in Python. It
  follows strictly the 2.0.0 version of the SemVer scheme. semantic_version can
  also support versions which wouldn't match the semantic version scheme by
  converting a version such as 0.1.2.3.4 into 0.1.2+3.4.
