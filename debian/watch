@@ -1,0 +1,3 @@
+version=3
+http://pypi.python.org/packages/source/s/semantic_version semantic_version-(.*).tar.gz
+

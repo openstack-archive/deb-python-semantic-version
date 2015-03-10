@@ -1,0 +1,9 @@
+Document: python-semantic-version-doc
+Title: semantic_version Documentation
+Author: N/A
+Abstract: Sphinx documentation for semantic_version
+Section: Programming/Python
+
+Format: HTML
+Index: /usr/share/doc/python-semantic-version-doc/html/index.html
+Files: /usr/share/doc/python-semantic-version-doc/html/*
