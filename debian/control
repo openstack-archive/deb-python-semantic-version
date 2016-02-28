@@ -11,8 +11,8 @@ Build-Depends: debhelper (>= 9),
                python3-all,
                python3-setuptools
 Standards-Version: 3.9.6
-Vcs-Browser: http://anonscm.debian.org/gitweb/?p=openstack/python-semantic-version.git
-Vcs-Git: git://anonscm.debian.org/openstack/python-semantic-version.git
+Vcs-Browser: https://anonscm.debian.org/cgit/openstack/python-semantic-version.git/
+Vcs-Git: https://anonscm.debian.org/git/openstack/python-semantic-version.git
 Homepage: https://github.com/rbarrois/python-semanticversion
 
 Package: python-semantic-version
