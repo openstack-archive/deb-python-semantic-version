@@ -1,6 +1,6 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: semantic_version
-Source: git://github.com/rbarrois/python-semanticversion.git
+Source: https://github.com/rbarrois/python-semanticversion
 
 Files: debian/*
 Copyright: (c) 2015, Thomas Goirand <zigo@debian.org>
