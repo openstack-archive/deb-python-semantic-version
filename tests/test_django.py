@@ -1,75 +1,161 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2012-2014 The python-semanticversion project
+# Copyright (c) The python-semanticversion project
 # This code is distributed under the two-clause BSD License.
 
 from __future__ import unicode_literals
 
-try:  # pragma: no cover
-    import unittest2 as unittest
-except ImportError:  # pragma: no cover
-    import unittest
+import unittest
+import sys
 
 import semantic_version
 
-try:  # pragma: no cover
-    from django.conf import settings
-    django_loaded = True
-except ImportError:  # pragma: no cover
-    django_loaded = False
+from .setup_django import django_loaded
+
 
 if django_loaded:  # pragma: no cover
+    from semantic_version import django_fields
     from .django_test_app import models
-    from django.core import serializers
 
-try:  # pragma: no cover
-    import south
-    import south.creator.freezer
-    import south.modelsinspector
-except ImportError:  # pragma: no cover
-    south = None
+    import django
+    from django.conf import settings
+    from django.core import serializers
+    from django.core.management import call_command
+    from django.db import connection
+    from django.test import TestCase as DjangoTestCase
+    from django.test import TransactionTestCase
+    from django.test import runner as django_test_runner
+    from django.test import utils as django_test_utils
+
+else:
+    DjangoTestCase = unittest.TestCase
+    TransactionTestCase = unittest.TestCase
+
+
+test_state = {}
+
+
+def setUpModule():
+    if not django_loaded:  # pragma: no cover
+        raise unittest.SkipTest("Django not installed")
+    django_test_utils.setup_test_environment()
+    runner = django_test_runner.DiscoverRunner()
+    runner_state = runner.setup_databases()
+    test_state.update({
+        'runner': runner,
+        'runner_state': runner_state,
+    })
+
+
+def tearDownModule():
+    if not django_loaded:  # pragma: no cover
+        return
+    runner = test_state['runner']
+    runner_state = test_state['runner_state']
+    runner.teardown_databases(runner_state)
+    django_test_utils.teardown_test_environment()
+
+
+# the refresh_from_db method only came in with 1.8, so in order to make this
+# work will all supported versions we have our own function.
+def save_and_refresh(obj):
+    """Saves an object, and refreshes from the database."""
+    obj.save()
+    obj = obj.__class__.objects.get(id=obj.id)
+
+
+Version = semantic_version.Version
+Spec = semantic_version.Spec
 
 
 @unittest.skipIf(not django_loaded, "Django not installed")
 class DjangoFieldTestCase(unittest.TestCase):
     def test_version(self):
-        obj = models.VersionModel(version='0.1.1', spec='==0.1.1,!=0.1.1-alpha')
+        obj = models.VersionModel(version=Version('0.1.1'), spec=Spec('==0.1.1,!=0.1.1-alpha'))
 
-        self.assertEqual(semantic_version.Version('0.1.1'), obj.version)
-        self.assertEqual(semantic_version.Spec('==0.1.1,!=0.1.1-alpha'), obj.spec)
+        self.assertEqual(Version('0.1.1'), obj.version)
+        self.assertEqual(Spec('==0.1.1,!=0.1.1-alpha'), obj.spec)
 
         alt_obj = models.VersionModel(version=obj.version, spec=obj.spec)
 
-        self.assertEqual(semantic_version.Version('0.1.1'), alt_obj.version)
-        self.assertEqual(semantic_version.Spec('==0.1.1,!=0.1.1-alpha'), alt_obj.spec)
+        self.assertEqual(Version('0.1.1'), alt_obj.version)
+        self.assertEqual(Spec('==0.1.1,!=0.1.1-alpha'), alt_obj.spec)
         self.assertEqual(obj.spec, alt_obj.spec)
         self.assertEqual(obj.version, alt_obj.version)
 
+    def test_version_clean(self):
+        """Calling .full_clean() should convert str to Version/Spec objects."""
+        obj = models.VersionModel(version='0.1.1', spec='==0.1.1,!=0.1.1-alpha')
         obj.full_clean()
 
-    def test_partial_spec(self):
-        obj = models.VersionModel(version='0.1.1', spec='==0,!=0.2')
-        self.assertEqual(semantic_version.Version('0.1.1'), obj.version)
-        self.assertEqual(semantic_version.Spec('==0,!=0.2'), obj.spec)
+        self.assertEqual(Version('0.1.1'), obj.version)
+        self.assertEqual(Spec('==0.1.1,!=0.1.1-alpha'), obj.spec)
 
-    def test_coerce(self):
+    def test_version_save(self):
+        """Test saving object with a VersionField."""
+        # first test with a null value
+        obj = models.PartialVersionModel()
+        self.assertIsNone(obj.id)
+        self.assertIsNone(obj.optional)
+        save_and_refresh(obj)
+        self.assertIsNotNone(obj.id)
+        self.assertIsNone(obj.optional_spec)
+
+        # now set to something that is not null
+        spec = Spec('==0,!=0.2')
+        obj.optional_spec = spec
+        save_and_refresh(obj)
+        self.assertEqual(obj.optional_spec, spec)
+
+    def test_spec_save(self):
+        """Test saving object with a SpecField."""
+        # first test with a null value
+        obj = models.PartialVersionModel()
+        self.assertIsNone(obj.id)
+        self.assertIsNone(obj.optional_spec)
+        save_and_refresh(obj)
+        self.assertIsNotNone(obj.id)
+        self.assertIsNone(obj.optional_spec)
+
+        # now set to something that is not null
+        spec = Spec('==0,!=0.2')
+        obj.optional_spec = spec
+        save_and_refresh(obj)
+        self.assertEqual(obj.optional_spec, spec)
+
+    def test_partial_spec_clean(self):
+        obj = models.VersionModel(version='0.1.1', spec='==0,!=0.2')
+        obj.full_clean()
+        self.assertEqual(Version('0.1.1'), obj.version)
+        self.assertEqual(Spec('==0,!=0.2'), obj.spec)
+
+    def test_coerce_clean(self):
         obj = models.CoerceVersionModel(version='0.1.1a+2', partial='23')
-        self.assertEqual(semantic_version.Version('0.1.1-a+2'), obj.version)
-        self.assertEqual(semantic_version.Version('23', partial=True), obj.partial)
+        obj.full_clean()
+        self.assertEqual(Version('0.1.1-a+2'), obj.version)
+        self.assertEqual(Version('23', partial=True), obj.partial)
 
         obj2 = models.CoerceVersionModel(version='23', partial='0.1.2.3.4.5/6')
-        self.assertEqual(semantic_version.Version('23.0.0'), obj2.version)
-        self.assertEqual(semantic_version.Version('0.1.2+3.4.5-6', partial=True), obj2.partial)
+        obj2.full_clean()
+        self.assertEqual(Version('23.0.0'), obj2.version)
+        self.assertEqual(Version('0.1.2+3.4.5-6', partial=True), obj2.partial)
 
+    @unittest.skipIf(django.VERSION[:2] < (1, 8), "Django<1.8 casts values on setattr")
     def test_invalid_input(self):
-        self.assertRaises(ValueError, models.VersionModel,
-            version='0.1.1', spec='blah')
-        self.assertRaises(ValueError, models.VersionModel,
-            version='0.1', spec='==0.1.1,!=0.1.1-alpha')
+        v = models.VersionModel(version='0.1.1', spec='blah')
+        self.assertRaises(ValueError, v.full_clean)
+
+        v2 = models.VersionModel(version='0.1', spec='==0.1.1,!=0.1.1-alpha')
+        self.assertRaises(ValueError, v2.full_clean)
+
+    @unittest.skipUnless(django.VERSION[:2] < (1, 8), "Django>=1.8 doesn't mangle setattr")
+    def test_invalid_input_full_clean(self):
+        self.assertRaises(ValueError, models.VersionModel, version='0.1.1', spec='blah')
+        self.assertRaises(ValueError, models.VersionModel, version='0.1', spec='==0.1.1,!=0.1.1-alpha')
 
     def test_partial(self):
-        obj = models.PartialVersionModel(partial='0.1.0')
+        obj = models.PartialVersionModel(partial=Version('0.1.0'))
 
-        self.assertEqual(semantic_version.Version('0.1.0', partial=True), obj.partial)
+        self.assertEqual(Version('0.1.0', partial=True), obj.partial)
         self.assertIsNone(obj.optional)
         self.assertIsNone(obj.optional_spec)
 
@@ -80,123 +166,101 @@ class DjangoFieldTestCase(unittest.TestCase):
             optional_spec=obj.optional_spec,
         )
 
-        self.assertEqual(semantic_version.Version('0.1.0', partial=True), alt_obj.partial)
+        self.assertEqual(Version('0.1.0', partial=True), alt_obj.partial)
         self.assertEqual(obj.partial, alt_obj.partial)
         self.assertIsNone(obj.optional)
         self.assertIsNone(obj.optional_spec)
 
+        # Validation should be fine
         obj.full_clean()
 
     def test_serialization(self):
-        o1 = models.VersionModel(version='0.1.1', spec='==0.1.1,!=0.1.1-alpha')
-        o2 = models.VersionModel(version='0.4.3-rc3+build3',
-            spec='<=0.1.1-rc2,!=0.1.1-rc1')
+        o1 = models.VersionModel(version=Version('0.1.1'), spec=Spec('==0.1.1,!=0.1.1-alpha'))
+        o2 = models.VersionModel(version=Version('0.4.3-rc3+build3'),
+            spec=Spec('<=0.1.1-rc2,!=0.1.1-rc1'))
 
         data = serializers.serialize('json', [o1, o2])
 
         obj1, obj2 = serializers.deserialize('json', data)
-        self.assertEqual(o1, obj1.object)
-        self.assertEqual(o2, obj2.object)
+        self.assertEqual(o1.version, obj1.object.version)
+        self.assertEqual(o1.spec, obj1.object.spec)
+        self.assertEqual(o2.version, obj2.object.version)
+        self.assertEqual(o2.spec, obj2.object.spec)
 
     def test_serialization_partial(self):
-        o1 = models.PartialVersionModel(partial='0.1.1', optional='0.2.4-rc42',
-            optional_spec=None)
-        o2 = models.PartialVersionModel(partial='0.4.3-rc3+build3', optional='',
-            optional_spec='==0.1.1,!=0.1.1-alpha')
+        o1 = models.PartialVersionModel(
+            partial=Version('0.1.1', partial=True),
+            optional=Version('0.2.4-rc42', partial=True),
+            optional_spec=None,
+        )
+        o2 = models.PartialVersionModel(
+            partial=Version('0.4.3-rc3+build3', partial=True),
+            optional='',
+            optional_spec=Spec('==0.1.1,!=0.1.1-alpha'),
+        )
 
         data = serializers.serialize('json', [o1, o2])
 
         obj1, obj2 = serializers.deserialize('json', data)
-        self.assertEqual(o1, obj1.object)
-        self.assertEqual(o2, obj2.object)
+        self.assertEqual(o1.partial, obj1.object.partial)
+        self.assertEqual(o1.optional, obj1.object.optional)
+        self.assertEqual(o2.partial, obj2.object.partial)
+        self.assertEqual(o2.optional, obj2.object.optional)
 
 
-@unittest.skipIf(not django_loaded or south is None, "Couldn't import south and django")
-class SouthTestCase(unittest.TestCase):
-    def test_freezing_version_model(self):
-        frozen = south.modelsinspector.get_model_fields(models.VersionModel)
+@unittest.skipIf(not django_loaded, "Django not installed")
+class FieldMigrationTests(DjangoTestCase):
+    def test_version_field(self):
+        field = django_fields.VersionField(
+            partial=True,
+            coerce=True,
+        )
+        expected = {
+            'coerce': True,
+            'partial': True,
+            'max_length': 200,
+        }
+        if hasattr(sys, 'pypy_version_info'):
+            # Django under Pypy adds this extra key.
+            expected['help_text'] = u''
 
-        self.assertEqual(frozen['version'],
-            ('semantic_version.django_fields.VersionField', [], {'max_length': '200'}))
+        self.assertEqual(field.deconstruct()[3], expected)
 
-        self.assertEqual(frozen['spec'],
-            ('semantic_version.django_fields.SpecField', [], {'max_length': '200'}))
+    def test_spec_field(self):
+        field = django_fields.SpecField()
+        expected = {'max_length': 200}
+        if hasattr(sys, 'pypy_version_info'):
+            # Django under Pypy adds this extra key.
+            expected['help_text'] = u''
 
-    def test_freezing_partial_version_model(self):
-        frozen = south.modelsinspector.get_model_fields(models.PartialVersionModel)
-
-        self.assertEqual(frozen['partial'],
-            ('semantic_version.django_fields.VersionField', [], {'max_length': '200', 'partial': 'True'}))
-
-        self.assertEqual(frozen['optional'],
-            ('semantic_version.django_fields.VersionField', [], {'max_length': '200', 'blank': 'True', 'null': 'True'}))
-
-        self.assertEqual(frozen['optional_spec'],
-            ('semantic_version.django_fields.SpecField', [], {'max_length': '200', 'blank': 'True', 'null': 'True'}))
-
-    def test_freezing_coerce_version_model(self):
-        frozen = south.modelsinspector.get_model_fields(models.CoerceVersionModel)
-
-        self.assertEqual(frozen['version'],
-            ('semantic_version.django_fields.VersionField', [], {'max_length': '200', 'coerce': 'True'}))
-
-        self.assertEqual(frozen['partial'],
-                ('semantic_version.django_fields.VersionField', [], {'max_length': '200', 'partial': 'True', 'coerce': 'True'}))
-
-    def test_freezing_app(self):
-        frozen = south.creator.freezer.freeze_apps('django_test_app')
-
-        # Test VersionModel
-        self.assertEqual(frozen['django_test_app.versionmodel']['version'],
-            ('semantic_version.django_fields.VersionField', [], {'max_length': '200'}))
-
-        self.assertEqual(frozen['django_test_app.versionmodel']['spec'],
-            ('semantic_version.django_fields.SpecField', [], {'max_length': '200'}))
-
-        # Test PartialVersionModel
-        self.assertEqual(frozen['django_test_app.partialversionmodel']['partial'],
-            ('semantic_version.django_fields.VersionField', [], {'max_length': '200', 'partial': 'True'}))
-
-        self.assertEqual(frozen['django_test_app.partialversionmodel']['optional'],
-            ('semantic_version.django_fields.VersionField', [], {'max_length': '200', 'blank': 'True', 'null': 'True'}))
-
-        self.assertEqual(frozen['django_test_app.partialversionmodel']['optional_spec'],
-            ('semantic_version.django_fields.SpecField', [], {'max_length': '200', 'blank': 'True', 'null': 'True'}))
-
-        # Test CoerceVersionModel
-        self.assertEqual(frozen['django_test_app.coerceversionmodel']['version'],
-            ('semantic_version.django_fields.VersionField', [], {'max_length': '200', 'coerce': 'True'}))
-
-        self.assertEqual(frozen['django_test_app.coerceversionmodel']['partial'],
-            ('semantic_version.django_fields.VersionField', [], {'max_length': '200', 'partial': 'True', 'coerce': 'True'}))
+        self.assertEqual(field.deconstruct()[3], expected)
 
 
-if django_loaded:
-    from django.test import TestCase
-    from django.test.simple import DjangoTestSuiteRunner
+@unittest.skipIf(not django_loaded, "Django not installed")
+class FullMigrateTests(TransactionTestCase):
+    def test_migrate(self):
+        # Let's check that this does not crash
+        call_command('makemigrations', verbosity=0)
+        call_command('migrate', verbosity=0)
+        with connection.cursor() as cursor:
+            table_list = connection.introspection.get_table_list(cursor)
+            if django.VERSION[:2] >= (1, 8):
+                table_list = [t.name for t in connection.introspection.get_table_list(cursor)]
+            self.assertIn('django_test_app_versionmodel', table_list)
 
-    class DbInteractingTestCase(TestCase):
 
-        @classmethod
-        def setUpClass(cls):
-            cls.old_state = DjangoTestSuiteRunner().setup_databases()
+@unittest.skipIf(not django_loaded, "Django not installed")
+class DbInteractingTestCase(DjangoTestCase):
 
-        @classmethod
-        def tearDownClass(cls):
-            DjangoTestSuiteRunner().teardown_databases(cls.old_state)
+    def test_db_interaction(self):
+        o1 = models.VersionModel(version=Version('0.1.1'), spec=Spec('<0.2.4-rc42'))
+        o2 = models.VersionModel(version=Version('0.4.3-rc3+build3'), spec=Spec('==0.4.3'))
 
-        def test_db_interaction(self):
-            o1 = models.VersionModel(version='0.1.1', spec='<0.2.4-rc42')
-            o2 = models.VersionModel(version='0.4.3-rc3+build3', spec='==0.4.3')
+        o1.save()
+        o2.save()
 
-            o1.save()
-            o2.save()
+        obj1 = models.VersionModel.objects.get(pk=o1.pk)
+        self.assertEqual(o1.version, obj1.version)
 
-            obj1 = models.VersionModel.objects.get(pk=o1.pk)
-            self.assertEqual(o1.version, obj1.version)
-
-            obj2 = models.VersionModel.objects.get(pk=o2.pk)
-            self.assertEqual(o2.version, obj2.version)
-
-else:  # pragma: no cover
-    pass
+        obj2 = models.VersionModel.objects.get(pk=o2.pk)
+        self.assertEqual(o2.version, obj2.version)

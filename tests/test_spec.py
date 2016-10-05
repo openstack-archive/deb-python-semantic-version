@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (c) 2012-2014 The python-semanticversion project
+# Copyright (c) The python-semanticversion project
 # This code is distributed under the two-clause BSD License.
 
 """Test conformance to the specs."""
@@ -154,10 +154,3 @@ class FormatTests(unittest.TestCase):
         self.assertLess(Version('1.0.0-beta.2'), Version('1.0.0-beta.11'))
         self.assertLess(Version('1.0.0-beta.11'), Version('1.0.0-rc.1'))
         self.assertLess(Version('1.0.0-rc.1'), Version('1.0.0'))
-
-
-
-class PrecedenceTestCase(unittest.TestCase):
-    pass
-
-
