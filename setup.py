@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (c) 2012-2014 The python-semanticversion project
+# Copyright (c) The python-semanticversion project
 
 
 import codecs
@@ -25,6 +25,16 @@ def get_version(package_name):
     return '0.1.0'
 
 
+def clean_readme(fname):
+    """Cleanup README.rst for proper PyPI formatting."""
+    with codecs.open(fname, 'r', 'utf-8') as f:
+        return ''.join(
+            re.sub(r':\w+:`([^`]+?)( <[^<>]+>)?`', r'``\1``', line)
+            for line in f
+            if not (line.startswith('.. currentmodule') or line.startswith('.. toctree'))
+        )
+
+
 PACKAGE = 'semantic_version'
 
 
@@ -34,6 +44,7 @@ setup(
     author="Raphaël Barrois",
     author_email="raphael.barrois+semver@polytechnique.org",
     description="A library implementing the 'SemVer' scheme.",
+    long_description=clean_readme('README.rst'),
     license='BSD',
     keywords=['semantic version', 'versioning', 'version'],
     url='https://github.com/rbarrois/python-semanticversion',
@@ -50,11 +61,10 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.2',
-        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ],
     test_suite='tests',

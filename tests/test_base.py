@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (c) 2012-2014 The python-semanticversion project
+# Copyright (c) The python-semanticversion project
 # This code is distributed under the two-clause BSD License.
 
 """Test the various functions from 'base'."""
@@ -64,7 +64,7 @@ class TopLevelTestCase(unittest.TestCase):
         ('0.1.1', '0.1.1', 0),
         ('0.1.1', '0.1.0', 1),
         ('0.1.0-alpha', '0.1.0', -1),
-        ('0.1.0-alpha+2', '0.1.0-alpha', 1),
+        ('0.1.0-alpha+2', '0.1.0-alpha', NotImplemented),
     )
 
     def test_compare(self):
@@ -179,7 +179,6 @@ class VersionTestCase(unittest.TestCase):
         '1.1.2': (1, 1, 2, None, None),
         '1.1.3-rc4.5': (1, 1, 3, ('rc4', '5'), None),
         '1.0.0-': (1, 0, 0, (), None),
-        '1.0.0+': (1, 0, 0, (), ()),
         '1.0.0-rc.1+build.1': (1, 0, 0, ('rc', '1'), ('build', '1')),
         '1.0.0+0.3.7': (1, 0, 0, (), ('0', '3', '7')),
         '1.3.7+build': (1, 3, 7, (), ('build',)),
@@ -242,21 +241,188 @@ class VersionTestCase(unittest.TestCase):
         self.assertTrue(v != '0.1.0')
         self.assertFalse(v == '0.1.0')
 
+    def test_bump_clean_versions(self):
+        # We Test each property explicitly as the == comparator for versions
+        # does not distinguish between prerelease or builds for equality.
+
+        v = base.Version('1.0.0+build')
+        v = v.next_major()
+        self.assertEqual(v.major, 2)
+        self.assertEqual(v.minor, 0)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.0.0+build')
+        v = v.next_minor()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 1)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.0.0+build')
+        v = v.next_patch()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 0)
+        self.assertEqual(v.patch, 1)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.1.0+build')
+        v = v.next_major()
+        self.assertEqual(v.major, 2)
+        self.assertEqual(v.minor, 0)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.1.0+build')
+        v = v.next_minor()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 2)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.1.0+build')
+        v = v.next_patch()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 1)
+        self.assertEqual(v.patch, 1)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.0.1+build')
+        v = v.next_major()
+        self.assertEqual(v.major, 2)
+        self.assertEqual(v.minor, 0)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.0.1+build')
+        v = v.next_minor()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 1)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.0.1+build')
+        v = v.next_patch()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 0)
+        self.assertEqual(v.patch, 2)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+    def test_bump_prerelease_versions(self):
+        # We Test each property explicitly as the == comparator for versions
+        # does not distinguish between prerelease or builds for equality.
+
+        v = base.Version('1.0.0-pre+build')
+        v = v.next_major()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 0)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.0.0-pre+build')
+        v = v.next_minor()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 0)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.0.0-pre+build')
+        v = v.next_patch()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 0)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.1.0-pre+build')
+        v = v.next_major()
+        self.assertEqual(v.major, 2)
+        self.assertEqual(v.minor, 0)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.1.0-pre+build')
+        v = v.next_minor()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 1)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.1.0-pre+build')
+        v = v.next_patch()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 1)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.0.1-pre+build')
+        v = v.next_major()
+        self.assertEqual(v.major, 2)
+        self.assertEqual(v.minor, 0)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.0.1-pre+build')
+        v = v.next_minor()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 1)
+        self.assertEqual(v.patch, 0)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
+        v = base.Version('1.0.1-pre+build')
+        v = v.next_patch()
+        self.assertEqual(v.major, 1)
+        self.assertEqual(v.minor, 0)
+        self.assertEqual(v.patch, 1)
+        self.assertEqual(v.prerelease, ())
+        self.assertEqual(v.build, ())
+
 
 class SpecItemTestCase(unittest.TestCase):
+    invalids = [
+        '<=0.1.1+build3',
+        '<=0.1.1+',
+        '>0.2.3-rc2+',
+    ]
+
+    def test_invalids(self):
+        for invalid in self.invalids:
+            with self.assertRaises(ValueError, msg="SpecItem(%r) should be invalid" % invalid):
+                _v = base.SpecItem(invalid)
+
     components = {
         '==0.1.0': (base.SpecItem.KIND_EQUAL, 0, 1, 0, None, None),
         '==0.1.2-rc3': (base.SpecItem.KIND_EQUAL, 0, 1, 2, ('rc3',), None),
         '==0.1.2+build3.14': (base.SpecItem.KIND_EQUAL, 0, 1, 2, (), ('build3', '14')),
-        '<=0.1.1+': (base.SpecItem.KIND_LTE, 0, 1, 1, (), ()),
+        '<=0.1.1': (base.SpecItem.KIND_LTE, 0, 1, 1, None, None),
         '<0.1.1': (base.SpecItem.KIND_LT, 0, 1, 1, None, None),
         '<=0.1.1': (base.SpecItem.KIND_LTE, 0, 1, 1, None, None),
+        '!=0.1.1+': (base.SpecItem.KIND_NEQ, 0, 1, 1, (), ()),
         '<=0.1.1-': (base.SpecItem.KIND_LTE, 0, 1, 1, (), None),
         '>=0.2.3-rc2': (base.SpecItem.KIND_GTE, 0, 2, 3, ('rc2',), None),
-        '>0.2.3-rc2+': (base.SpecItem.KIND_GT, 0, 2, 3, ('rc2',), ()),
         '>=2.0.0': (base.SpecItem.KIND_GTE, 2, 0, 0, None, None),
-        '!=0.1.1+': (base.SpecItem.KIND_NEQ, 0, 1, 1, (), ()),
+        '!=0.1.1+rc3': (base.SpecItem.KIND_NEQ, 0, 1, 1, (), ('rc3',)),
         '!=0.3.0': (base.SpecItem.KIND_NEQ, 0, 3, 0, None, None),
+        '=0.3.0': (base.SpecItem.KIND_EQUAL, 0, 3, 0, None, None),
+        '0.3.0': (base.SpecItem.KIND_EQUAL, 0, 3, 0, None, None),
+        '~0.1.2': (base.SpecItem.KIND_TILDE, 0, 1, 2, None, None),
+        '^0.1.3': (base.SpecItem.KIND_CARET, 0, 1, 3, None, None),
     }
 
     def test_components(self):
@@ -271,11 +437,16 @@ class SpecItemTestCase(unittest.TestCase):
             self.assertEqual(prerelease, spec.spec.prerelease)
             self.assertEqual(build, spec.spec.build)
 
-            self.assertNotEqual(spec, spec_text)
-            self.assertEqual(spec_text, str(spec))
-
     matches = {
         '==0.1.0': (
+            ['0.1.0', '0.1.0-rc1', '0.1.0+build1', '0.1.0-rc1+build2'],
+            ['0.0.1', '0.2.0', '0.1.1'],
+        ),
+        '=0.1.0': (
+            ['0.1.0', '0.1.0-rc1', '0.1.0+build1', '0.1.0-rc1+build2'],
+            ['0.0.1', '0.2.0', '0.1.1'],
+        ),
+        '0.1.0': (
             ['0.1.0', '0.1.0-rc1', '0.1.0+build1', '0.1.0-rc1+build2'],
             ['0.0.1', '0.2.0', '0.1.1'],
         ),
@@ -307,13 +478,17 @@ class SpecItemTestCase(unittest.TestCase):
             ['0.2.3-rc3', '0.2.3', '0.2.3+1', '0.2.3-rc2', '0.2.3-rc2+1'],
             ['0.2.3-rc1', '0.2.2'],
         ),
-        '>0.2.3-rc2+': (
-            ['0.2.3-rc3', '0.2.3', '0.2.3-rc2+1'],
-            ['0.2.3-rc1', '0.2.2', '0.2.3-rc2'],
+        '==0.2.3+': (
+            ['0.2.3'],
+            ['0.2.3+rc1', '0.2.4', '0.2.3-rc2'],
         ),
-        '>2.0.0+': (
-            ['2.1.1', '2.0.0+b1', '3.1.4'],
-            ['1.9.9', '1.9.9999', '2.0.0', '2.0.0-rc4'],
+        '!=0.2.3-rc2+12': (
+            ['0.2.3-rc3', '0.2.3', '0.2.3-rc2+1', '0.2.4', '0.2.3-rc3+12'],
+            ['0.2.3-rc2+12'],
+        ),
+        '==2.0.0+b1': (
+            ['2.0.0+b1'],
+            ['2.1.1', '1.9.9', '1.9.9999', '2.0.0', '2.0.0-rc4'],
         ),
         '!=0.1.1': (
             ['0.1.2', '0.1.0', '1.4.2'],
@@ -322,6 +497,34 @@ class SpecItemTestCase(unittest.TestCase):
         '!=0.3.4-': (
             ['0.4.0', '1.3.0', '0.3.4-alpha', '0.3.4-alpha+b1'],
             ['0.3.4', '0.3.4+b1'],
+        ),
+        '~1.1.2': (
+            ['1.1.3', '1.1.2-alpha', '1.1.2-alpha+b1'],
+            ['1.1.1', '1.2.1', '2.1.0'],
+        ),
+        '^1.1.2': (
+            ['1.1.3', '1.2.1', '1.1.2-alpha', '1.1.2-alpha+b1'],
+            ['1.1.1', '2.1.0'],
+        ),
+        '^0.1.2': (
+            ['0.1.2', '0.1.2-alpha', '0.1.3'],
+            ['0.2.0', '1.1.2', '0.1.1'],
+        ),
+        '^0.0.2': (
+            ['0.0.2', '0.0.2-alpha', '0.0.2+abb'],
+            ['0.1.0', '0.0.3', '1.0.0'],
+        ),
+        '~=1.4.5': (
+            ['1.4.5', '1.4.10-alpha', '1.4.10'],
+            ['1.3.6', '1.4.4', '1.5.0'],
+        ),
+        '~=1.4.0': (
+            ['1.4.0', '1.4.10-alpha', '1.4.10'],
+            ['1.3.6', '1.3.9', '1.5.0'],
+        ),
+        '~=1.4': (
+            ['1.4.0', '1.6.10-alpha', '1.6.10'],
+            ['1.3.0', '2.0.0'],
         ),
     }
 
@@ -412,13 +615,17 @@ class SpecTestCase(unittest.TestCase):
                 self.assertTrue(repr(base.SpecItem(spec_text)) in repr(spec_list))
 
     matches = {
+        # At least 0.1.1 including pre-releases, less than 0.1.2 excluding pre-releases
         '>=0.1.1,<0.1.2': (
             ['0.1.1', '0.1.1+4', '0.1.1-alpha'],
             ['0.1.2-alpha', '0.1.2', '1.3.4'],
         ),
-        '>=0.1.0+,!=0.1.3-rc1,<0.1.4': (
+        # At least 0.1.0 without pre-releases, less than 0.1.4 excluding pre-releases,
+        # neither 0.1.3-rc1 nor any build of that version,
+        # not 0.1.0+b3 precisely
+        '>=0.1.0-,!=0.1.3-rc1,!=0.1.0+b3,<0.1.4': (
             ['0.1.1', '0.1.0+b4', '0.1.2', '0.1.3-rc2'],
-            ['0.0.1', '0.1.4', '0.1.4-alpha', '0.1.3-rc1+4',
+            ['0.0.1', '0.1.0+b3', '0.1.4', '0.1.4-alpha', '0.1.3-rc1+4',
              '0.1.0-alpha', '0.2.2', '0.1.4-rc1'],
         ),
     }

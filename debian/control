@@ -2,14 +2,16 @@ Source: python-semantic-version
 Section: python
 Priority: optional
 Maintainer: PKG OpenStack <openstack-devel@lists.alioth.debian.org>
-Uploaders: Thomas Goirand <zigo@debian.org>
+Uploaders: Thomas Goirand <zigo@debian.org>,
 Build-Depends: debhelper (>= 9),
                dh-python,
                python-all (>= 2.6.6-3~),
                python-setuptools,
                python-sphinx,
                python3-all,
-               python3-setuptools
+               python3-setuptools,
+Build-Depends-Indep: python-django,
+                     python3-django,
 Standards-Version: 3.9.6
 Vcs-Browser: https://git.openstack.org/cgit/openstack/deb-python-semantic-version?h=debian%2Fnewton
 Vcs-Git: https://git.openstack.org/openstack/deb-python-semantic-version -b debian/newton
@@ -17,9 +19,9 @@ Homepage: https://github.com/rbarrois/python-semanticversion
 
 Package: python-semantic-version
 Architecture: all
-Pre-Depends: dpkg (>= 1.15.6~)
-Depends: ${misc:Depends}, ${python:Depends}
-Suggests: python-semantic-version-doc
+Depends: ${misc:Depends},
+         ${python:Depends},
+Suggests: python-semantic-version-doc,
 Description: implementing the SemVer scheme - Python 2.x
  This small Python library provides a few tools to handle SemVer in Python. It
  follows strictly the 2.0.0 version of the SemVer scheme. semantic_version can
@@ -30,9 +32,9 @@ Description: implementing the SemVer scheme - Python 2.x
 
 Package: python3-semantic-version
 Architecture: all
-Pre-Depends: dpkg (>= 1.15.6~)
-Depends: ${misc:Depends}, ${python3:Depends}
-Suggests: python-semantic-version-doc
+Depends: ${misc:Depends},
+         ${python3:Depends},
+Suggests: python-semantic-version-doc,
 Description: implementing the SemVer scheme - Python 3.x
  This small Python library provides a few tools to handle SemVer in Python. It
  follows strictly the 2.0.0 version of the SemVer scheme. semantic_version can
@@ -44,8 +46,8 @@ Description: implementing the SemVer scheme - Python 3.x
 Package: python-semantic-version-doc
 Section: doc
 Architecture: all
-Pre-Depends: dpkg (>= 1.15.6~)
-Depends: ${misc:Depends}, ${sphinxdoc:Depends}
+Depends: ${misc:Depends},
+         ${sphinxdoc:Depends},
 Description: implementing the SemVer scheme - doc
  This small Python library provides a few tools to handle SemVer in Python. It
  follows strictly the 2.0.0 version of the SemVer scheme. semantic_version can

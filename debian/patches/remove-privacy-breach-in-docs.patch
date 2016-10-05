@@ -1,0 +1,33 @@
+Description: Remove privacy breanch in docs
+Author: Thomas Goirand <zigo@debian.org>
+Forwarded: no
+Last-Update: 2016-10-05
+
+--- python-semantic-version-2.6.0.orig/README.rst
++++ python-semantic-version-2.6.0/README.rst
+@@ -4,25 +4,6 @@ python-semanticversion
+ This small python library provides a few tools to handle `SemVer`_ in Python.
+ It follows strictly the 2.0.0 version of the SemVer scheme.
+ 
+-.. image:: https://secure.travis-ci.org/rbarrois/python-semanticversion.png?branch=master
+-    :target: http://travis-ci.org/rbarrois/python-semanticversion/
+-
+-.. image:: https://img.shields.io/pypi/v/semantic_version.svg
+-    :target: https://python-semanticversion.readthedocs.io/en/latest/changelog.html
+-    :alt: Latest Version
+-
+-.. image:: https://img.shields.io/pypi/pyversions/semantic_version.svg
+-    :target: https://pypi.python.org/pypi/semantic_version/
+-    :alt: Supported Python versions
+-
+-.. image:: https://img.shields.io/pypi/wheel/semantic_version.svg
+-    :target: https://pypi.python.org/pypi/semantic_version/
+-    :alt: Wheel status
+-
+-.. image:: https://img.shields.io/pypi/l/semantic_version.svg
+-    :target: https://pypi.python.org/pypi/semantic_version/
+-    :alt: License
+-
+ Links
+ -----
+ 

@@ -1,8 +1,3 @@
-.. python-semanticversion documentation master file, created by
-   sphinx-quickstart on Wed May 16 10:41:34 2012.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 python-semanticversion
 ======================
 
@@ -12,13 +7,27 @@ It follows strictly the 2.0.0 version of the SemVer scheme.
 .. image:: https://secure.travis-ci.org/rbarrois/python-semanticversion.png?branch=master
     :target: http://travis-ci.org/rbarrois/python-semanticversion/
 
-semantic_version supports Python 2.6, 2.7, 3.2, 3.3, and is distributed under the two-clause BSD licence.
+.. image:: https://img.shields.io/pypi/v/semantic_version.svg
+    :target: https://python-semanticversion.readthedocs.io/en/latest/changelog.html
+    :alt: Latest Version
+
+.. image:: https://img.shields.io/pypi/pyversions/semantic_version.svg
+    :target: https://pypi.python.org/pypi/semantic_version/
+    :alt: Supported Python versions
+
+.. image:: https://img.shields.io/pypi/wheel/semantic_version.svg
+    :target: https://pypi.python.org/pypi/semantic_version/
+    :alt: Wheel status
+
+.. image:: https://img.shields.io/pypi/l/semantic_version.svg
+    :target: https://pypi.python.org/pypi/semantic_version/
+    :alt: License
 
 Links
 -----
 
 - Package on `PyPI`_: http://pypi.python.org/pypi/semantic_version/
-- Doc on `ReadTheDocs <http://readthedocs.org/>`_: http://readthedocs.org/docs/python-semanticversion/
+- Doc on `ReadTheDocs <http://readthedocs.org/>`_: https://python-semanticversion.readthedocs.io/
 - Source on `GitHub <http://github.com/>`_: http://github.com/rbarrois/python-semanticversion/
 - Build on `Travis CI <http://travis-ci.org/>`_: http://travis-ci.org/rbarrois/python-semanticversion/
 - Semantic Version specification: `SemVer`_
@@ -27,7 +36,7 @@ Links
 Getting started
 ===============
 
-Intall the package from `PyPI`_, using pip:
+Install the package from `PyPI`_, using pip:
 
 .. code-block:: sh
 
@@ -112,6 +121,22 @@ Obviously, :class:`Versions <Version>` can be compared:
     >>> semantic_version.Version('0.1.1') <= semantic_version.Version('0.1.1-alpha')
     False
 
+You can also get a new version that represents a bump in one of the version levels:
+
+.. code-block:: pycon
+
+    >>> v = semantic_version.Version('0.1.1-pre+build')
+    >>> new_v = v.next_major()
+    >>> str(new_v)
+    '1.0.0'
+    >>> v = semantic_version.Version('1.1.1-pre+build')
+    >>> new_v = v.next_minor()
+    >>> str(new_v)
+    '1.2.0'
+    >>> v = semantic_version.Version('1.1.1-pre+build')
+    >>> new_v = v.next_patch()
+    >>> str(new_v)
+    '1.1.2'
 
 It is also possible to check whether a given string is a proper semantic version string:
 
@@ -236,19 +261,18 @@ definition or (for the empty pre-release number) if a single dash is appended
     False
 
 
-Including build identifiers in specifications
-"""""""""""""""""""""""""""""""""""""""""""""
+Including build metadata in specifications
+""""""""""""""""""""""""""""""""""""""""""
 
-The same rule applies for the build identifier: comparisons will include it only
-if it was included in the :class:`Spec` definition, or - for the unnumbered build
-version - if a single + is appended to the definition(``1.0.0+``, ``1.0.0-alpha+``):
+Build metadata has no ordering; thus, the only meaningful comparison including
+build metadata is equality.
 
 
 .. code-block:: pycon
 
-    >>> Version('1.0.0+build2') in Spec('<=1.0.0')   # Build identifier ignored
+    >>> Version('1.0.0+build2') in Spec('<=1.0.0')   # Build metadata ignored
     True
-    >>> Version('1.0.0+build2') in Spec('<=1.0.0+')  # Include build in checks
+    >>> Version('1.0.0+build2') in Spec('==1.0.0+build2')  # Include build in checks
     False
 
 
@@ -283,7 +307,7 @@ When submitting patches or pull requests, you should respect the following rules
 .. note:: All files should contain the following header::
 
           # -*- encoding: utf-8 -*-
-          # Copyright (c) 2012-2014 The python-semanticversion project
+          # Copyright (c) The python-semanticversion project
 
 
 Contents
