@@ -1,7 +1,12 @@
+PACKAGE=semantic_version
+TESTS_DIR=tests
+DOC_DIR=docs
+
+# Use current python binary instead of system default.
+COVERAGE = python $(shell which coverage)
+FLAKE8 = flake8
+
 all: default
-
-
-PACKAGE_DIR = src/semantic_version
 
 
 default:
@@ -9,20 +14,40 @@ default:
 
 clean:
 	find . -type f -name '*.pyc' -delete
+	find . -type f -path '*/__pycache__/*' -delete
+	find . -type d -empty -delete
+	@rm -rf tmp_test/
+
+
+install-deps:
+	pip install --upgrade pip setuptools
+	pip install --upgrade -r requirements_dev.txt
+	pip freeze
+
+testall:
+	tox
 
 
 test:
 	python -W default setup.py test
 
+# Note: we run the linter in two runs, because our __init__.py files has specific warnings we want to exclude
+lint:
+	check-manifest
+	$(FLAKE8) --config .flake8 --exclude $(PACKAGE)/__init__.py $(PACKAGE)
+	$(FLAKE8) --config .flake8 --ignore F401 $(PACKAGE)/__init__.py
+
 coverage:
-	coverage erase
-	coverage run "--include=$(PACKAGE_DIR)/*.py,tests/*.py" --branch setup.py test
-	coverage report "--include=$(PACKAGE_DIR)/*.py,tests/*.py"
-	coverage html "--include=$(PACKAGE_DIR)/*.py,tests/*.py"
+	$(COVERAGE) erase
+	$(COVERAGE) run "--include=$(PACKAGE)/*.py,$(TESTS_DIR)/*.py" --branch setup.py test
+	$(COVERAGE) report "--include=$(PACKAGE)/*.py,$(TESTS_DIR)/*.py"
+	$(COVERAGE) html "--include=$(PACKAGE)/*.py,$(TESTS_DIR)/*.py"
+
+coverage-xml-report: coverage
+	$(COVERAGE) xml "--include=$(PACKAGE)/*.py,$(TESTS_DIR)/*.py"
 
 doc:
-	$(MAKE) -C docs html
+	$(MAKE) -C $(DOC_DIR) html
 
 
-.PHONY: all default clean coverage doc test
-
+.PHONY: all default clean coverage doc install-deps lint test

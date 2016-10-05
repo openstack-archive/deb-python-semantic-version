@@ -1,24 +1,38 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2012-2014 The python-semanticversion project
+# Copyright (c) The python-semanticversion project
 # This code is distributed under the two-clause BSD License.
 
 from __future__ import unicode_literals
 
+import django
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 from . import base
 
 
-class BaseSemVerField(models.CharField):
-    __metaclass__ = models.SubfieldBase
+class SemVerField(models.CharField):
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('max_length', 200)
-        super(BaseSemVerField, self).__init__(*args, **kwargs)
+        super(SemVerField, self).__init__(*args, **kwargs)
+
+    if django.VERSION[:2] < (1, 8):
+        def contribute_to_class(self, cls, name, **kwargs):
+            """Emulate SubFieldBase for Django < 1.8"""
+            super(SemVerField, self).contribute_to_class(cls, name, **kwargs)
+            from django.db.models.fields import subclassing
+            setattr(cls, self.name, subclassing.Creator(self))
+
+    def from_db_value(self, value, expression, connection, context):
+        """Convert from the database format.
+
+        This should be the inverse of self.get_prep_value()
+        """
+        return self.to_python(value)
 
     def get_prep_value(self, obj):
-        return str(obj)
+        return None if obj is None else str(obj)
 
     def get_db_prep_value(self, value, connection, prepared=False):
         if not prepared:
@@ -30,12 +44,7 @@ class BaseSemVerField(models.CharField):
         return str(value)
 
     def run_validators(self, value):
-        return super(BaseSemVerField, self).run_validators(str(value))
-
-
-# Py2 and Py3-compatible metaclass
-SemVerField = models.SubfieldBase(
-    str('SemVerField'), (BaseSemVerField, models.CharField), {})
+        return super(SemVerField, self).run_validators(str(value))
 
 
 class VersionField(SemVerField):
@@ -48,6 +57,13 @@ class VersionField(SemVerField):
         self.partial = kwargs.pop('partial', False)
         self.coerce = kwargs.pop('coerce', False)
         super(VersionField, self).__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        """Handle django.db.migrations."""
+        name, path, args, kwargs = super(VersionField, self).deconstruct()
+        kwargs['partial'] = self.partial
+        kwargs['coerce'] = self.coerce
+        return name, path, args, kwargs
 
     def to_python(self, value):
         """Converts any value to a base.Version field."""
@@ -74,27 +90,3 @@ class SpecField(SemVerField):
         if isinstance(value, base.Spec):
             return value
         return base.Spec(value)
-
-
-def add_south_rules():
-    from south.modelsinspector import add_introspection_rules
-
-    add_introspection_rules([
-        (
-            (VersionField,),
-            [],
-            {
-                'partial': ('partial', {'default': False}),
-                'coerce': ('coerce', {'default': False}),
-            },
-        ),
-    ], ["semantic_version\.django_fields"])
-
-
-try:  # pragma: no cover
-    import south
-except ImportError: # pragma: no cover
-    south = None
-
-if south:  # pragma: no cover
-    add_south_rules()

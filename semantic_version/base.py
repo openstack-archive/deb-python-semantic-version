@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2012-2014 The python-semanticversion project
+# Copyright (c) The python-semanticversion project
 # This code is distributed under the two-clause BSD License.
 
 from __future__ import unicode_literals
@@ -10,11 +10,13 @@ import re
 
 from .compat import base_cmp
 
+
 def _to_int(value):
     try:
         return int(value), True
     except ValueError:
         return value, False
+
 
 def _has_leading_zero(value):
     return (value
@@ -68,8 +70,8 @@ def identifier_list_cmp(a, b):
 
 class Version(object):
 
-    version_re = re.compile('^(\d+)\.(\d+)\.(\d+)(?:-([0-9a-zA-Z.-]+))?(?:\+([0-9a-zA-Z.-]+))?$')
-    partial_version_re = re.compile('^(\d+)(?:\.(\d+)(?:\.(\d+))?)?(?:-([0-9a-zA-Z.-]*))?(?:\+([0-9a-zA-Z.-]*))?$')
+    version_re = re.compile(r'^(\d+)\.(\d+)\.(\d+)(?:-([0-9a-zA-Z.-]+))?(?:\+([0-9a-zA-Z.-]+))?$')
+    partial_version_re = re.compile(r'^(\d+)(?:\.(\d+)(?:\.(\d+))?)?(?:-([0-9a-zA-Z.-]*))?(?:\+([0-9a-zA-Z.-]*))?$')
 
     def __init__(self, version_string, partial=False):
         major, minor, patch, prerelease, build = self.parse(version_string, partial)
@@ -87,6 +89,26 @@ class Version(object):
         if value is None and allow_none:
             return value
         return int(value)
+
+    def next_major(self):
+        if self.prerelease and self.minor is 0 and self.patch is 0:
+            return Version('.'.join(str(x) for x in [self.major, self.minor, self.patch]))
+        else:
+            return Version('.'.join(str(x) for x in [self.major + 1, 0, 0]))
+
+    def next_minor(self):
+        if self.prerelease and self.patch is 0:
+            return Version('.'.join(str(x) for x in [self.major, self.minor, self.patch]))
+        else:
+            return Version(
+                '.'.join(str(x) for x in [self.major, self.minor + 1, 0]))
+
+    def next_patch(self):
+        if self.prerelease:
+            return Version('.'.join(str(x) for x in [self.major, self.minor, self.patch]))
+        else:
+            return Version(
+                '.'.join(str(x) for x in [self.major, self.minor, self.patch + 1]))
 
     @classmethod
     def coerce(cls, version_string, partial=False):
@@ -113,8 +135,10 @@ class Version(object):
 
         match = base_re.match(version_string)
         if not match:
-            raise ValueError("Version string lacks a numerical component: %r"
-                    % version_string)
+            raise ValueError(
+                "Version string lacks a numerical component: %r"
+                % version_string
+            )
 
         version = version_string[:match.end()]
         if not partial:
@@ -222,8 +246,11 @@ class Version(object):
     def _validate_identifiers(cls, identifiers, allow_leading_zeroes=False):
         for item in identifiers:
             if not item:
-                raise ValueError("Invalid empty identifier %r in %r"
-                        % (item, '.'.join(identifiers)))
+                raise ValueError(
+                    "Invalid empty identifier %r in %r"
+                    % (item, '.'.join(identifiers))
+                )
+
             if item[0] == '0' and item.isdigit() and item != '0' and not allow_leading_zeroes:
                 raise ValueError("Invalid leading zero in identifier %r" % item)
 
@@ -279,20 +306,14 @@ class Version(object):
                 return 0
 
         def build_cmp(a, b):
-            """Compare build components.
+            """Compare build metadata.
 
-            Special rule: a version without build component has lower
-            precedence than one with a build component.
+            Special rule: there is no ordering on build metadata.
             """
-            if a and b:
-                return identifier_list_cmp(a, b)
-            elif a:
-                # Versions with build field have higher precedence
-                return 1
-            elif b:
-                return -1
-            else:
+            if a == b:
                 return 0
+            else:
+                return NotImplemented
 
         def make_optional(orig_cmp_fun):
             """Convert a cmp-like function to consider 'None == *'."""
@@ -321,11 +342,7 @@ class Version(object):
                 build_cmp,
             ]
 
-    def __cmp__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-
-        field_pairs = zip(self, other)
+    def __compare(self, other):
         comparison_functions = self._comparison_functions(partial=self.partial or other.partial)
         comparisons = zip(comparison_functions, self, other)
 
@@ -336,44 +353,48 @@ class Version(object):
 
         return 0
 
-    def __eq__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-
-        return self.__cmp__(other) == 0
-
     def __hash__(self):
         return hash((self.major, self.minor, self.patch, self.prerelease, self.build))
 
-    def __ne__(self, other):
+    def __cmp__(self, other):
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+        return self.__compare(other)
+
+    def __compare_helper(self, other, condition, notimpl_target):
+        """Helper for comparison.
+
+        Allows the caller to provide:
+        - The condition
+        - The return value if the comparison is meaningless (ie versions with
+            build metadata).
+        """
         if not isinstance(other, self.__class__):
             return NotImplemented
 
-        return self.__cmp__(other) != 0
+        cmp_res = self.__cmp__(other)
+        if cmp_res is NotImplemented:
+            return notimpl_target
+
+        return condition(cmp_res)
+
+    def __eq__(self, other):
+        return self.__compare_helper(other, lambda x: x == 0, notimpl_target=False)
+
+    def __ne__(self, other):
+        return self.__compare_helper(other, lambda x: x != 0, notimpl_target=True)
 
     def __lt__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-
-        return self.__cmp__(other) < 0
+        return self.__compare_helper(other, lambda x: x < 0, notimpl_target=False)
 
     def __le__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-
-        return self.__cmp__(other) <= 0
+        return self.__compare_helper(other, lambda x: x <= 0, notimpl_target=False)
 
     def __gt__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-
-        return self.__cmp__(other) > 0
+        return self.__compare_helper(other, lambda x: x > 0, notimpl_target=False)
 
     def __ge__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-
-        return self.__cmp__(other) >= 0
+        return self.__compare_helper(other, lambda x: x >= 0, notimpl_target=False)
 
 
 class SpecItem(object):
@@ -383,11 +404,22 @@ class SpecItem(object):
     KIND_LT = '<'
     KIND_LTE = '<='
     KIND_EQUAL = '=='
+    KIND_SHORTEQ = '='
+    KIND_EMPTY = ''
     KIND_GTE = '>='
     KIND_GT = '>'
     KIND_NEQ = '!='
+    KIND_CARET = '^'
+    KIND_TILDE = '~'
+    KIND_COMPATIBLE = '~='
 
-    re_spec = re.compile(r'^(<|<=|==|>=|>|!=)(\d.*)$')
+    # Map a kind alias to its full version
+    KIND_ALIASES = {
+        KIND_SHORTEQ: KIND_EQUAL,
+        KIND_EMPTY: KIND_EQUAL,
+    }
+
+    re_spec = re.compile(r'^(<|<=||=|==|>=|>|!=|\^|~|~=)(\d.*)$')
 
     def __init__(self, requirement_string):
         kind, spec = self.parse(requirement_string)
@@ -408,7 +440,15 @@ class SpecItem(object):
             raise ValueError("Invalid requirement specification: %r" % requirement_string)
 
         kind, version = match.groups()
+        if kind in cls.KIND_ALIASES:
+            kind = cls.KIND_ALIASES[kind]
+
         spec = Version(version, partial=True)
+        if spec.build is not None and kind not in (cls.KIND_EQUAL, cls.KIND_NEQ):
+            raise ValueError(
+                "Invalid requirement specification %r: build numbers have no ordering."
+                % requirement_string
+            )
         return (kind, spec)
 
     def match(self, version):
@@ -426,6 +466,22 @@ class SpecItem(object):
             return version > self.spec
         elif self.kind == self.KIND_NEQ:
             return version != self.spec
+        elif self.kind == self.KIND_CARET:
+            if self.spec.major != 0:
+                upper = self.spec.next_major()
+            elif self.spec.minor != 0:
+                upper = self.spec.next_minor()
+            else:
+                upper = self.spec.next_patch()
+            return self.spec <= version < upper
+        elif self.kind == self.KIND_TILDE:
+            return self.spec <= version < self.spec.next_minor()
+        elif self.kind == self.KIND_COMPATIBLE:
+            if self.spec.patch is not None:
+                upper = self.spec.next_minor()
+            else:
+                upper = self.spec.next_major()
+            return self.spec <= version < upper
         else:  # pragma: no cover
             raise ValueError('Unexpected match kind: %r' % self.kind)
 

@@ -1,12 +1,16 @@
-python-semantic-version (2.3.1-2) unstable; urgency=medium
+python-semantic-version (2.6.0-1) unstable; urgency=medium
 
+  [ Thomas Goirand ]
+  * New upstream release.
+
+  [ Ondřej Nový ]
   * Fixed VCS URLs (https).
   * d/rules: Changed UPSTREAM_GIT protocol to https
   * d/copyright: Changed source URL to https protocol
   * d/s/options: extend-diff-ignore of .gitreview
   * d/control: Using OpenStack's Gerrit as VCS URLs.
 
- -- Ondřej Nový <novy@ondrej.org>  Sun, 28 Feb 2016 15:50:08 +0100
+ -- Thomas Goirand <zigo@debian.org>  Wed, 05 Oct 2016 15:28:38 +0200
 
 python-semantic-version (2.3.1-1) unstable; urgency=medium
 
